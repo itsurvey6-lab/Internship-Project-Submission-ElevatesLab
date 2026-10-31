@@ -1,0 +1,91 @@
+
+services:
+  app:
+    build: ./app
+    container_name: obs-app
+    environment:
+      OTEL_SERVICE_NAME: observability-demo
+    ports:
+      - "5000:5000"
+    depends_on:
+      - jaeger
+    networks:
+      - observability
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: obs-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - observability
+
+  loki:
+    image: grafana/loki:3.5.3
+    container_name: obs-loki
+    command:
+      - "-config.file=/etc/loki/loki.yml"
+    volumes:
+      - ./loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - observability
+
+  alloy:
+    image: grafana/alloy:v1.10.2
+    container_name: obs-alloy
+    command:
+      - "run"
+      - "--server.http.listen-addr=0.0.0.0:12345"
+      - "/etc/alloy/config.alloy"
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy_data:/var/lib/alloy/data
+    depends_on:
+      - loki
+    networks:
+      - observability
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.72.0
+    container_name: obs-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+    networks:
+      - observability
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    container_name: obs-grafana
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - jaeger
+    networks:
+      - observability
+
+volumes:
+  prometheus_data:
+  loki_data:
+  grafana_data:
+  alloy_data:
+
+networks:
+  observability:
+    driver: bridge

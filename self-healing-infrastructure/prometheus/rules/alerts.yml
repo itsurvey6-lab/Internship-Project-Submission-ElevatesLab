@@ -1,0 +1,12 @@
+
+groups:
+  - name: website-alerts
+    rules:
+      - alert: NginxWebsiteDown
+        expr: probe_success == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Nginx website is down"
+          description: "Blackbox Exporter cannot successfully reach the Nginx website."

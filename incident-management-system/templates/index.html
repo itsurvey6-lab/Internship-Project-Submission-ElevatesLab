@@ -1,0 +1,663 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Incident Management System | IncidentHub</title>
+
+    <!-- Bootstrap CSS -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <style>
+        body {
+            background-color: #f5f7fb;
+            color: #212529;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+
+        .page-heading {
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .card {
+            border-radius: 14px;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: 8px;
+        }
+
+        .btn {
+            border-radius: 8px;
+        }
+
+        .table th {
+            white-space: nowrap;
+            font-size: 0.85rem;
+            color: #495057;
+        }
+
+        .table td {
+            vertical-align: middle;
+        }
+
+        .incident-description {
+            max-width: 280px;
+            overflow-wrap: anywhere;
+        }
+
+        .status-form {
+            min-width: 190px;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .stat-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08) !important;
+        }
+
+        #filterResult {
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 767px) {
+            main.container {
+                padding-top: 1.5rem !important;
+            }
+
+            .status-form {
+                min-width: 250px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-dark bg-dark shadow-sm">
+        <div class="container">
+
+            <a class="navbar-brand" href="{{ url_for('home') }}">
+                IncidentHub
+            </a>
+
+            <div class="d-flex align-items-center gap-2 gap-md-3">
+
+                <span class="navbar-text text-light small d-none d-lg-inline">
+                    IT Operations Portal
+                </span>
+
+                <span class="badge bg-primary">
+                    {{ current_user.role }}
+                </span>
+
+                <span class="text-light small d-none d-sm-inline">
+                    {{ current_user.username }}
+                </span>
+
+                {% if current_user.role == "Admin" %}
+                    <a href="{{ url_for('manage_users') }}"
+                       class="btn btn-outline-info btn-sm">
+                        Users
+                    </a>
+                {% endif %}
+
+                <a href="{{ url_for('logout') }}"
+                   class="btn btn-outline-light btn-sm">
+                    Logout
+                </a>
+
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-5">
+
+        <!-- Page heading -->
+        <div class="mb-4">
+            <h1 class="page-heading h2">Incident Management</h1>
+            <p class="text-secondary mb-0">
+                Report, track, assign, and resolve infrastructure
+                and application issues.
+            </p>
+        </div>
+
+        <!-- Dashboard Statistics -->
+        <div class="row g-3 mb-4">
+
+            <div class="col-6 col-lg">
+                <div class="card stat-card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <p class="stat-label mb-2">Total Incidents</p>
+                        <h3 class="stat-number mb-0">
+                            {{ total_incidents }}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg">
+                <div class="card stat-card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <p class="stat-label mb-2">Open</p>
+                        <h3 class="stat-number text-primary mb-0">
+                            {{ open_incidents }}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg">
+                <div class="card stat-card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <p class="stat-label mb-2">In Progress</p>
+                        <h3 class="stat-number text-warning mb-0">
+                            {{ in_progress_incidents }}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg">
+                <div class="card stat-card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <p class="stat-label mb-2">Resolved</p>
+                        <h3 class="stat-number text-success mb-0">
+                            {{ resolved_incidents }}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg">
+                <div class="card stat-card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <p class="stat-label mb-2">Critical</p>
+                        <h3 class="stat-number text-danger mb-0">
+                            {{ critical_incidents }}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <!-- End Dashboard Statistics -->
+
+
+        <!-- Create Incident Form -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4">
+
+                <h2 class="h4 mb-1">Report an Incident</h2>
+                <p class="text-secondary mb-4">
+                    Enter the details of the issue you encountered.
+                </p>
+
+                <form action="{{ url_for('create_incident') }}"
+                      method="POST">
+
+                    <div class="row g-3">
+
+                        <div class="col-md-6">
+                            <label for="title" class="form-label">
+                                Incident Title
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="title"
+                                name="title"
+                                maxlength="150"
+                                placeholder="e.g. Application server unavailable"
+                                required
+                            >
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="priority" class="form-label">
+                                Priority
+                            </label>
+
+                            <select
+                                class="form-select"
+                                id="priority"
+                                name="priority"
+                                required
+                            >
+                                <option value="Low">Low</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="High">High</option>
+                                <option value="Critical">Critical</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="description" class="form-label">
+                                Description
+                            </label>
+
+                            <textarea
+                                class="form-control"
+                                id="description"
+                                name="description"
+                                rows="3"
+                                placeholder="Describe the issue and its impact..."
+                                required
+                            ></textarea>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="assigned_to" class="form-label">
+                                Assign To
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="assigned_to"
+                                name="assigned_to"
+                                maxlength="100"
+                                placeholder="Technician name (optional)"
+                            >
+                        </div>
+
+                        <div class="col-12">
+                            <button type="submit"
+                                    class="btn btn-primary px-4">
+                                + Create Incident
+                            </button>
+                        </div>
+
+                    </div>
+                </form>
+            </div>
+        </div>
+
+
+        <!-- Incident Dashboard -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+
+                <div class="d-flex flex-wrap justify-content-between
+                            align-items-center gap-2 mb-4">
+
+                    <div>
+                        <h2 class="h4 mb-1">Incident Dashboard</h2>
+                        <p class="text-secondary mb-0">
+                            Track and manage reported issues
+                        </p>
+                    </div>
+
+                    <span class="badge text-bg-primary fs-6">
+                        {{ incidents|length }} Total
+                    </span>
+                </div>
+
+
+                <!-- Incident Filters -->
+                <div class="row g-3 mb-3">
+
+                    <div class="col-md-4">
+                        <label for="statusFilter"
+                               class="form-label small fw-semibold">
+                            Filter by Status
+                        </label>
+
+                        <select id="statusFilter" class="form-select">
+                            <option value="">All statuses</option>
+                            <option value="Open">Open</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="priorityFilter"
+                               class="form-label small fw-semibold">
+                            Filter by Priority
+                        </label>
+
+                        <select id="priorityFilter" class="form-select">
+                            <option value="">All priorities</option>
+                            <option value="Critical">Critical</option>
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="incidentSearch"
+                               class="form-label small fw-semibold">
+                            Search Incidents
+                        </label>
+
+                        <input
+                            type="search"
+                            id="incidentSearch"
+                            class="form-control"
+                            placeholder="Search title or description..."
+                        >
+                    </div>
+
+                </div>
+                <!-- End Incident Filters -->
+
+                <div id="filterResult"
+                     class="text-secondary mb-3"
+                     aria-live="polite">
+                    Showing {{ incidents|length }} incidents
+                </div>
+
+
+                <!-- Incidents Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Incident</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Assigned To</th>
+                                <th>Created</th>
+
+                                {% if current_user.role in ["Admin", "Agent"] %}
+                                    <th>Update Status</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+
+                        <tbody id="incidentTableBody">
+
+                            {% for incident in incidents %}
+
+                            <tr
+                                data-status="{{ incident.status }}"
+                                data-priority="{{ incident.priority }}"
+                                data-search="{{ (incident.title ~ ' ' ~ incident.description)|lower }}"
+                            >
+
+                                <td class="fw-semibold">
+                                    #{{ incident.id }}
+                                </td>
+
+                                <td>
+                                    <div class="fw-semibold">
+                                        {{ incident.title }}
+                                    </div>
+
+                                    <div class="small text-secondary incident-description">
+                                        {{ incident.description|truncate(70) }}
+                                    </div>
+                                </td>
+
+                                <!-- Priority Badge -->
+                                <td>
+                                    {% if incident.priority == "Critical" %}
+                                        <span class="badge text-bg-danger">
+                                            Critical
+                                        </span>
+                                    {% elif incident.priority == "High" %}
+                                        <span class="badge text-bg-warning">
+                                            High
+                                        </span>
+                                    {% elif incident.priority == "Medium" %}
+                                        <span class="badge text-bg-info">
+                                            Medium
+                                        </span>
+                                    {% else %}
+                                        <span class="badge text-bg-secondary">
+                                            Low
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Status Badge -->
+                                <td>
+                                    {% if incident.status == "Resolved" %}
+                                        <span class="badge text-bg-success">
+                                            Resolved
+                                        </span>
+                                    {% elif incident.status == "In Progress" %}
+                                        <span class="badge text-bg-warning">
+                                            In Progress
+                                        </span>
+                                    {% else %}
+                                        <span class="badge text-bg-primary">
+                                            {{ incident.status }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Assignment -->
+                                <td>
+                                    {{ incident.assigned_to or "Unassigned" }}
+                                </td>
+
+                                <!-- Creation Date -->
+                                <td class="small text-nowrap">
+                                    {{ incident.created_at.strftime("%Y-%m-%d %H:%M") }}
+                                </td>
+
+                                <!-- Admin/Agent Status Update -->
+                                {% if current_user.role in ["Admin", "Agent"] %}
+                                    <td>
+                                        <form
+                                            action="{{ url_for('update_incident', incident_id=incident.id) }}"
+                                            method="POST"
+                                            class="d-flex gap-2 status-form"
+                                        >
+
+                                            <select
+                                                name="status"
+                                                class="form-select form-select-sm"
+                                                aria-label="Update status for incident {{ incident.id }}"
+                                            >
+                                                <option
+                                                    value="Open"
+                                                    {% if incident.status == "Open" %}selected{% endif %}
+                                                >
+                                                    Open
+                                                </option>
+
+                                                <option
+                                                    value="In Progress"
+                                                    {% if incident.status == "In Progress" %}selected{% endif %}
+                                                >
+                                                    In Progress
+                                                </option>
+
+                                                <option
+                                                    value="Resolved"
+                                                    {% if incident.status == "Resolved" %}selected{% endif %}
+                                                >
+                                                    Resolved
+                                                </option>
+                                            </select>
+
+                                            <input
+                                                type="text"
+                                                name="assigned_to"
+                                                class="form-control form-control-sm"
+                                                placeholder="Assign technician"
+                                                value="{{ incident.assigned_to or '' }}"
+                                                aria-label="Assigned technician for incident {{ incident.id }}"
+                                            >
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-primary"
+                                            >
+                                                Update
+                                            </button>
+
+                                        </form>
+                                    </td>
+                                {% endif %}
+
+                            </tr>
+
+                            {% else %}
+
+                            <tr id="emptyIncidentRow">
+                                <td
+                                    colspan="{% if current_user.role in ['Admin', 'Agent'] %}7{% else %}6{% endif %}"
+                                    class="text-center text-secondary py-5"
+                                >
+                                    <div class="fw-semibold mb-1">
+                                        No incidents yet
+                                    </div>
+
+                                    <div class="small">
+                                        Create your first incident using
+                                        the form above.
+                                    </div>
+                                </td>
+                            </tr>
+
+                            {% endfor %}
+
+                            <!-- Filter No-Results Message -->
+                            <tr id="noFilterResults" hidden>
+                                <td
+                                    colspan="{% if current_user.role in ['Admin', 'Agent'] %}7{% else %}6{% endif %}"
+                                    class="text-center text-secondary py-4"
+                                >
+                                    No incidents match your filters.
+                                    Try changing your search criteria.
+                                </td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- Footer -->
+        <footer class="text-center text-secondary small mt-4">
+            IncidentHub · Flask, SQLite and Bootstrap
+        </footer>
+
+    </main>
+
+
+    <!-- Incident Filtering JavaScript -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const statusFilter =
+                document.getElementById("statusFilter");
+
+            const priorityFilter =
+                document.getElementById("priorityFilter");
+
+            const incidentSearch =
+                document.getElementById("incidentSearch");
+
+            const filterResult =
+                document.getElementById("filterResult");
+
+            const noFilterResults =
+                document.getElementById("noFilterResults");
+
+            const incidentRows = Array.from(
+                document.querySelectorAll(
+                    "#incidentTableBody tr[data-status]"
+                )
+            );
+
+            function filterIncidents() {
+                const selectedStatus = statusFilter.value;
+                const selectedPriority = priorityFilter.value;
+                const searchText =
+                    incidentSearch.value.trim().toLowerCase();
+
+                let visibleCount = 0;
+
+                incidentRows.forEach(function (row) {
+                    const status = row.dataset.status;
+                    const priority = row.dataset.priority;
+                    const searchableText = row.dataset.search || "";
+
+                    const matchesStatus =
+                        !selectedStatus ||
+                        status === selectedStatus;
+
+                    const matchesPriority =
+                        !selectedPriority ||
+                        priority === selectedPriority;
+
+                    const matchesSearch =
+                        !searchText ||
+                        searchableText.includes(searchText);
+
+                    const visible =
+                        matchesStatus &&
+                        matchesPriority &&
+                        matchesSearch;
+
+                    row.hidden = !visible;
+
+                    if (visible) {
+                        visibleCount++;
+                    }
+                });
+
+                noFilterResults.hidden =
+                    incidentRows.length === 0 || visibleCount > 0;
+
+                filterResult.textContent =
+                    `Showing ${visibleCount} of ${incidentRows.length} incidents`;
+            }
+
+            statusFilter.addEventListener(
+                "change",
+                filterIncidents
+            );
+
+            priorityFilter.addEventListener(
+                "change",
+                filterIncidents
+            );
+
+            incidentSearch.addEventListener(
+                "input",
+                filterIncidents
+            );
+
+            filterIncidents();
+        });
+    </script>
+
+</body>
+</html>

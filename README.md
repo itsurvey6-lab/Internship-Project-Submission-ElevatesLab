@@ -1,21 +1,33 @@
-# ElevatesLab Internship Project Submission
+﻿# ElevatesLab Internship – Project Submission
 
 **Name:** Abdul Fayas  
-**GitHub:** itsurvey6-lab
+**GitHub:** [itsurvey6-lab](https://github.com/itsurvey6-lab)
 
-## Submitted Projects
+## Projects Submitted
+
+This repository contains four projects completed as part of the ElevatesLab internship program.
 
 ### 1. Observability Stack
-Monitoring and observability implementation.
+[View Project](./observability-stack)
+
+Monitoring and observability implementation using modern cloud-native tools.
 
 ### 2. Self-Healing Infrastructure
-Automated infrastructure failure detection and recovery using Prometheus, Alertmanager, Blackbox Exporter, Docker, and Python.
+[View Project](./self-healing-infrastructure)
+
+Automated infrastructure failure detection and self-healing recovery using Prometheus, Alertmanager, Blackbox Exporter, Docker, and Python.
 
 ### 3. Incident Management System
-Flask-based incident management application with role-based access control and REST API.
+[View Project](./incident-management-system)
+
+Flask-based incident management application featuring role-based access control and REST API integration.
 
 ### 4. ArgoCD GitOps Demo
-GitOps-based continuous deployment using ArgoCD and Kubernetes.
+[View Project](./argocd-gitops-demo)
+
+GitOps-based continuous deployment demonstration using ArgoCD and Kubernetes.
 
 ---
-Submitted for ElevatesLab Internship Project Evaluation.
+
+**Submission:** ElevatesLab Internship Project Evaluation  
+**Submitted by:** Abdul Fayas
